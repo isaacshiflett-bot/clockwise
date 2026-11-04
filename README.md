@@ -28,7 +28,7 @@ The demo users are created on first load. PINs are SHA-256 hashed with the Web C
 
 Managers can open **Insights** to see coverage by weekday and hour, coverage against targets, weekly hours, shift averages, overtime watch, and optional output rates. The default view uses approved shifts from the last four weeks. The **Include pending entries** checkbox adds pending shifts. Each chart has a table view and CSV export.
 
-Set a target headcount for one weekday and hour in **Coverage targets**. Saving a target of zero clears it. Add task categories and units in **Overview → Output categories**. Workers can record optional counts on clock out or when editing an entry; rates appear after at least three shifts have output for that category. Morning is 06:00–12:00, Afternoon 12:00–18:00, Evening 18:00–24:00, and other starts are Overnight. The **Load sample data · demo only** button creates four weeks of approved shifts for active demo workers; it replaces prior generated sample shifts.
+Set a target headcount for one weekday and hour in **Coverage targets**. Saving a target of zero clears it. Add task categories and units in **Overview → Output categories**. Workers can record optional counts on clock out or when editing an entry; rates appear after at least three shifts have output for that category. Morning is 06:00–12:00, Afternoon 12:00–18:00, Evening 18:00–24:00, and other starts are Overnight. The **Load sample data · demo only** button creates four weeks of approved shifts with output counts for active workers; it replaces prior generated sample shifts. If no active task categories exist, it adds two demo categories so the productivity charts have data.
 
 ## Vercel deployment
 
