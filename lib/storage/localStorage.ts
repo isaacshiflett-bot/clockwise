@@ -1,11 +1,12 @@
 import type {Backup,CoverageTarget,EntryFilters,Session,TaskCategory,TimeEntry,User} from '../types';
+import {demoData} from '../demo';
 import type {StorageAdapter} from './types';
-export const STORAGE_KEY='timeclock:v1';export const SCHEMA_VERSION=2;
+export const STORAGE_KEY='timeclock:v1';export const SCHEMA_VERSION=3;
 export function migrate(data:Partial<Backup>&{schemaVersion?:number}):Backup {return {schemaVersion:SCHEMA_VERSION,users:data.users||[],entries:(data.entries||[]).map(e=>({...e,output:e.output||[]})),categories:data.categories||[],targets:data.targets||[],session:data.session||null};}
 export async function hashPin(pin:string):Promise<string>{const bytes=new TextEncoder().encode(pin);const digest=await crypto.subtle.digest('SHA-256',bytes);return Array.from(new Uint8Array(digest),b=>b.toString(16).padStart(2,'0')).join('');}
 export class LocalStorageAdapter implements StorageAdapter {
- private async read():Promise<Backup>{if(typeof window==='undefined')return migrate({});const raw=window.localStorage.getItem(STORAGE_KEY);if(raw){try{const parsed=JSON.parse(raw);const data=migrate(parsed);if(parsed.schemaVersion!==SCHEMA_VERSION)window.localStorage.setItem(STORAGE_KEY,JSON.stringify(data));return data;}catch{window.localStorage.removeItem(STORAGE_KEY);}}
- const pins=['1234','1111','2222','3333'];const names=['Manager','Alex Rivera','Jordan Lee','Sam Patel'];const now=new Date().toISOString();const users=await Promise.all(names.map(async(name,i)=>({id:`demo-${i}`,name,role:i===0?'manager' as const:'worker' as const,pinHash:await hashPin(pins[i]),active:true,createdAt:now})));const data=migrate({users});window.localStorage.setItem(STORAGE_KEY,JSON.stringify(data));return data;}
+ private async read():Promise<Backup>{if(typeof window==='undefined')return migrate({});const raw=window.localStorage.getItem(STORAGE_KEY);if(raw){try{const parsed=JSON.parse(raw);const data=migrate(parsed);const seededUsers=data.users.length===4&&data.users.every((u,i)=>u.id===`demo-${i}`);if(parsed.schemaVersion<SCHEMA_VERSION&&seededUsers&&data.entries.length===0&&data.categories.length===0&&data.targets.length===0){Object.assign(data,demoData());}if(parsed.schemaVersion!==SCHEMA_VERSION)window.localStorage.setItem(STORAGE_KEY,JSON.stringify(data));return data;}catch{window.localStorage.removeItem(STORAGE_KEY);}}
+ const pins=['1234','1111','2222','3333'];const names=['Manager','Alex Rivera','Jordan Lee','Sam Patel'];const now=new Date().toISOString();const users=await Promise.all(names.map(async(name,i)=>({id:`demo-${i}`,name,role:i===0?'manager' as const:'worker' as const,pinHash:await hashPin(pins[i]),active:true,createdAt:now})));const data=migrate({users,...demoData()});window.localStorage.setItem(STORAGE_KEY,JSON.stringify(data));return data;}
  private async write(data:Backup){if(typeof window==='undefined')return;window.localStorage.setItem(STORAGE_KEY,JSON.stringify(data));}
  async getUsers(){return (await this.read()).users;}
  async getUser(id:string){return (await this.read()).users.find(u=>u.id===id);}

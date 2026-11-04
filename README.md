@@ -22,7 +22,7 @@ Open http://localhost:3000. Run `npm run lint`, `npm test`, and `npm run build` 
 | Jordan Lee | Worker | 2222 |
 | Sam Patel | Worker | 3333 |
 
-The demo users are created on first load. PINs are SHA-256 hashed with the Web Crypto API before they are saved. **Client-side authentication is demo-only, not real security.** Anyone with browser access can inspect or change local data.
+The demo users are created on first load, along with sample shifts, output categories, and coverage targets so each view has data to explore. The sample includes approved, pending, and rejected entries; clock in as a worker to try a live shift. An existing browser with entries is left unchanged; an untouched earlier demo setup is populated once. PINs are SHA-256 hashed with the Web Crypto API before they are saved. **Client-side authentication is demo-only, not real security.** Anyone with browser access can inspect or change local data.
 
 ## Insights
 
