@@ -11,7 +11,7 @@ export class LocalStorageAdapter implements StorageAdapter {
  async getUser(id:string){return (await this.read()).users.find(u=>u.id===id);}
  async saveUser(user:User){const d=await this.read();d.users=d.users.filter(u=>u.id!==user.id).concat(user);await this.write(d);}
  async getEntries(f:EntryFilters={}){return (await this.read()).entries.filter(e=>(!f.userId||e.userId===f.userId)&&(!f.status||e.status===f.status)&&(!f.from||e.clockIn>=f.from)&&(!f.to||e.clockIn<=f.to)).sort((a,b)=>b.clockIn.localeCompare(a.clockIn));}
- async saveEntry(entry:TimeEntry){const d=await this.read();d.entries=d.entries.filter(e=>e.id!==entry.id).concat(entry);await this.write(d);}
+ async saveEntry(entry:TimeEntry){const d=await this.read();if(entry.status==='open'&&d.entries.some(e=>e.userId===entry.userId&&e.status==='open'&&e.id!==entry.id))throw new Error('Worker already has an open shift');d.entries=d.entries.filter(e=>e.id!==entry.id).concat(entry);await this.write(d);}
  async deleteEntry(id:string){const d=await this.read();d.entries=d.entries.filter(e=>e.id!==id);await this.write(d);}
  async getSession(){return (await this.read()).session;}
  async saveSession(session:Session|null){const d=await this.read();d.session=session;await this.write(d);}
