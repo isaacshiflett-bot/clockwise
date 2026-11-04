@@ -1,0 +1,11 @@
+export type Role = 'worker' | 'manager';
+export type EntryStatus = 'open' | 'pending' | 'approved' | 'rejected';
+export type User = { id:string; name:string; role:Role; pinHash:string; active:boolean; createdAt:string };
+export type Break = {start:string; end:string|null};
+export type Output = {categoryId:string; count:number};
+export type TimeEntry = {id:string; userId:string; clockIn:string; clockOut:string|null; breaks:Break[]; note:string; source:'clock'|'manual'; status:EntryStatus; reviewedBy:string|null; reviewedAt:string|null; reviewComment:string; createdAt:string; updatedAt:string; output:Output[]};
+export type TaskCategory = {id:string; name:string; unit:string; active:boolean};
+export type CoverageTarget = {dayOfWeek:number; hour:number; headcount:number};
+export type Session = {userId:string};
+export type Backup = {schemaVersion:number; users:User[]; entries:TimeEntry[]; categories:TaskCategory[]; targets:CoverageTarget[]; session:Session|null};
+export type EntryFilters = {userId?:string; status?:EntryStatus; from?:string; to?:string};
