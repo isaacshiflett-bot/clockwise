@@ -53,6 +53,46 @@ describe('LocalStorageAdapter',()=>{
     await expect(db.saveEntry(newEntry('test-worker','2026-01-05T10:00:00Z','clock'))).rejects.toThrow(/open shift/);
   });
 
+  it('reminds after data changes but not after login',async()=>{
+    const db=new LocalStorageAdapter();
+    expect(await db.getBackupStatus()).toEqual({lastBackupAt:null,needsBackup:true});
+    await db.recordBackupExport((await db.exportAll()).revision);
+    expect((await db.getBackupStatus()).needsBackup).toBe(false);
+    await db.saveSession({userId:'demo-0'});
+    expect((await db.getBackupStatus()).needsBackup).toBe(false);
+    await db.saveEntry(newEntry('test-worker','2026-01-05T09:00:00Z','clock'));
+    expect((await db.getBackupStatus()).needsBackup).toBe(true);
+  });
+
+  it('saves pay-period settings and includes them in a full backup',async()=>{
+    const db=new LocalStorageAdapter();
+    await db.recordBackupExport((await db.exportAll()).revision);
+    await db.saveSettings({payPeriodAnchor:'2026-11-02',payPeriodWeeks:1});
+    expect(await db.getSettings()).toEqual({payPeriodAnchor:'2026-11-02',payPeriodWeeks:1});
+    expect((await db.exportAll()).settings.payPeriodWeeks).toBe(1);
+    expect((await db.getBackupStatus()).needsBackup).toBe(true);
+    await expect(db.saveSettings({payPeriodAnchor:'2026-11-02',payPeriodWeeks:0})).rejects.toThrow();
+  });
+
+  it('keeps the reminder when data changes during a backup download',async()=>{
+    const db=new LocalStorageAdapter();
+    const exported=await db.exportAll();
+    await db.saveEntry(newEntry('test-worker','2026-01-05T09:00:00Z','clock'));
+    await db.recordBackupExport(exported.revision);
+    expect((await db.getBackupStatus()).needsBackup).toBe(true);
+  });
+
+  it('migrates legacy settings and prompts for a new backup after import',async()=>{
+    const db=new LocalStorageAdapter();
+    const legacy={schemaVersion:3,users:[],entries:[],categories:[],targets:[],session:null};
+    localStorage.setItem(STORAGE_KEY,JSON.stringify(legacy));
+    expect(await db.getSettings()).toEqual({payPeriodAnchor:'2024-01-01',payPeriodWeeks:2});
+    await db.recordBackupExport((await db.exportAll()).revision);
+    const backup=await db.exportAll();
+    await db.importAll(backup);
+    expect((await db.getBackupStatus()).needsBackup).toBe(true);
+  });
+
   it('upgrades an untouched v2 demo browser with placeholder data',async()=>{
     const db=new LocalStorageAdapter();
     const users=await db.getUsers();
