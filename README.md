@@ -36,8 +36,14 @@ Set a target headcount for one weekday and hour in **Coverage targets**. Saving 
 
 Push this repository to GitHub, then import the GitHub repository in Vercel. The Next.js framework is detected automatically. No environment variables, custom build command, database, or Vercel settings are needed.
 
+## Local backups and pay periods
+
+The manager Overview shows **Backup due** when local data has changed since the last full JSON export. It displays the last export time and lets you download a new backup. Signing in and out does not mark data as changed. Keep the downloaded file outside the browser; importing a backup prompts for confirmation and marks the restored data as needing a fresh export.
+
+In Overview → **Pay period**, choose the first day of a period and a length of 1–4 weeks. Worker pay-period totals follow this setting. The default is a two-week period anchored to Monday, January 1, 2024. Weekly totals still begin Monday.
+
 ## Data and limitations
 
-All data stays in the current browser and device under the `timeclock:v1` localStorage key. It is not shared across devices or users, even when the same Vercel URL is opened. Use **Overview → Backup** to export/import a full JSON copy. Shifts are stored as ISO 8601 UTC timestamps and shown in the browser's local time zone. Shifts crossing midnight count toward their start day. Weeks begin Monday, and pay periods are consecutive two-week periods anchored to Monday, January 1, 2024.
+All data stays in the current browser and device under the `timeclock:v1` localStorage key. It is not shared across devices or users, even when the same Vercel URL is opened. Use **Overview → Backup** to export/import a full JSON copy. Shifts are stored as ISO 8601 UTC timestamps and shown in the browser's local time zone. Shifts crossing midnight count toward their start day.
 
 All data access goes through the async `StorageAdapter` interface in `lib/storage/types.ts`. To add a hosted database later, implement that interface and change the active adapter export in `lib/storage/index.ts`; UI code does not read localStorage directly. A real deployment with multiple people also needs server-side authentication and authorization.
