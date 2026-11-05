@@ -44,6 +44,10 @@ The manager Overview shows **Backup due** when local data has changed since the 
 
 In Overview → **Pay period**, choose the first day of a period and a length of 1–4 weeks. Worker pay-period totals follow this setting. The default is a two-week period anchored to Monday, January 1, 2024. Weekly totals still begin Monday.
 
+Managers can open **Closeout** to review completed pay periods. The page lists unresolved shifts, approved daily hours, and Monday-based weekly hours. Once every shift in a period is approved, a manager can sign off and lock it, then download a payroll CSV. Reopen a period to make corrections and sign off again. The weekly figure includes approved shifts elsewhere in the same workweek when a configured pay period begins midweek.
+
+**Shift change history** on that page records creation, edits, approval, rejection, and deletion with the actor and before/after values. Existing changes from before this feature cannot be reconstructed. The full history and closeout records are included in JSON backups. These controls live in browser storage and are intended for local review, not tamper-proof payroll records.
+
 ## Data and limitations
 
 All data stays in the current browser and device under the `timeclock:v1` localStorage key. It is not shared across devices or users, even when the same Vercel URL is opened. Use **Overview → Backup** to export/import a full JSON copy. Shifts are stored as ISO 8601 UTC timestamps and shown in the browser's local time zone. Shifts crossing midnight count toward their start day.
