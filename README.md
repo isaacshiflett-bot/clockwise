@@ -2,6 +2,8 @@
 
 A mobile-first work-time tracker built with Next.js App Router, TypeScript, Tailwind CSS, Recharts, and Vitest. Workers clock in and out, take breaks, submit manual entries, and see their own history. Managers review entries, manage workers and output categories, set coverage targets, and explore scheduling insights.
 
+If a worker forgets to clock out, **Forgot to clock out? Correct the time** on the time clock lets them enter the actual end time and a required explanation. An unfinished break also needs its actual end time. The corrected shift becomes a manual pending entry for manager approval; the original clock-in stays intact. This works even when the open shift is older than 24 hours, while the corrected shift itself must still be no longer than 24 hours.
+
 ## Run locally
 
 Install Node.js 20.9 or newer, then run:
