@@ -109,6 +109,20 @@ describe('LocalStorageAdapter',()=>{
     expect(await db.getEntries()).toHaveLength(1);
   });
 
+  it('migrates department assignments and keeps past shift snapshots after reassignment',async()=>{
+    const db=new LocalStorageAdapter();
+    const old=await db.exportAll();
+    const users=old.users.map(user=>Object.fromEntries(Object.entries(user).filter(([key])=>key!=='department')));
+    const entries=old.entries.map(entry=>Object.fromEntries(Object.entries(entry).filter(([key])=>key!=='department')));
+    localStorage.setItem(STORAGE_KEY,JSON.stringify({...old,schemaVersion:4,users,entries}));
+    const alex=(await db.getUsers()).find(u=>u.id==='demo-1')!;
+    const past=(await db.getEntries({userId:'demo-1'}))[0];
+    expect(alex.department).toBe('Fulfillment');
+    expect(past.department).toBe('Fulfillment');
+    await db.saveUser({...alex,department:'Support'});
+    expect((await db.getEntries({userId:'demo-1'}))[0].department).toBe('Fulfillment');
+  });
+
   it('migrates v1 entries with empty output and categories',async()=>{
     const db=new LocalStorageAdapter();
     const old={schemaVersion:1,users:[],entries:[Object.fromEntries(Object.entries(newEntry('u','2026-01-05T09:00:00Z','clock')).filter(([k])=>k!=='output'))],session:null};

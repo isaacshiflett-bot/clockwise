@@ -22,4 +22,4 @@ export function correctMissedClockOut(entry:TimeEntry,clockOut:string,note:strin
  if(error)throw new Error(error);
  return corrected;
 }
-export function newEntry(userId:string,start:string,source:'clock'|'manual',end:string|null=null,note=''):TimeEntry {const now=new Date().toISOString();return {id:crypto.randomUUID(),userId,clockIn:start,clockOut:end,breaks:[],note,source,status:end?'pending':'open',reviewedBy:null,reviewedAt:null,reviewComment:'',createdAt:now,updatedAt:now,output:[]};}
+export function newEntry(userId:string,start:string,source:'clock'|'manual',end:string|null=null,note='',department='Unassigned'):TimeEntry {const now=new Date().toISOString();return {id:crypto.randomUUID(),userId,department,clockIn:start,clockOut:end,breaks:[],note,source,status:end?'pending':'open',reviewedBy:null,reviewedAt:null,reviewComment:'',createdAt:now,updatedAt:now,output:[]};}
