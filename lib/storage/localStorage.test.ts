@@ -132,5 +132,51 @@ describe('LocalStorageAdapter',()=>{
     expect((await db.exportAll()).schemaVersion).toBe(SCHEMA_VERSION);
     expect(migrate(old as never).categories).toEqual([]);
   });
+
+  it('adds empty audit and closeout collections to a v5 backup',async()=>{
+    const db=new LocalStorageAdapter();
+    const backup=await db.exportAll();
+    const legacy=Object.fromEntries(Object.entries(backup).filter(([key])=>key!=='auditEvents'&&key!=='closeouts'));
+    localStorage.setItem(STORAGE_KEY,JSON.stringify({...legacy,schemaVersion:5}));
+    expect(await db.getAuditEvents()).toEqual([]);
+    expect(await db.getCloseouts()).toEqual([]);
+    expect((await db.exportAll()).schemaVersion).toBe(SCHEMA_VERSION);
+  });
+
+  it('records who changed, approved, and deleted a shift with previous values',async()=>{
+    const db=new LocalStorageAdapter();
+    await db.saveSession({userId:'demo-0'});
+    const pending=newEntry('test-worker','2025-01-06T09:00:00Z','manual','2025-01-06T17:00:00Z');
+    await db.saveEntry(pending);
+    const approved={...pending,status:'approved' as const,reviewedBy:'demo-0',reviewedAt:new Date().toISOString()};
+    await db.saveEntry(approved);
+    await db.deleteEntry(pending.id);
+    const events=(await db.getAuditEvents()).filter(event=>event.entryId===pending.id);
+    expect(events.map(event=>event.action).sort()).toEqual(['approved','created','deleted']);
+    expect(events.every(event=>event.actorId==='demo-0')).toBe(true);
+    expect(events.find(event=>event.action==='approved')?.before?.status).toBe('pending');
+    expect(events.find(event=>event.action==='deleted')?.before?.status).toBe('approved');
+    expect(events.find(event=>event.action==='deleted')?.after).toBeNull();
+  });
+
+  it('requires manager sign-off, resolves exceptions, locks a closed period, and allows reopening',async()=>{
+    const db=new LocalStorageAdapter();
+    const blank=await db.exportAll();
+    await db.importAll({...blank,entries:[],auditEvents:[],closeouts:[]});
+    const start='2025-01-06T00:00:00Z',end='2025-01-20T00:00:00Z';
+    const pending=newEntry('demo-1','2025-01-06T09:00:00Z','manual','2025-01-06T17:00:00Z');
+    await db.saveEntry(pending);
+    await expect(db.closePayPeriod(start,end)).rejects.toThrow(/Manager/);
+    await db.saveSession({userId:'demo-0'});
+    await expect(db.closePayPeriod(start,end)).rejects.toThrow(/Resolve/);
+    await db.saveEntry({...pending,status:'approved'});
+    const closed=await db.closePayPeriod(start,end);
+    expect(closed.closedBy).toBe('demo-0');
+    await expect(db.saveEntry(newEntry('demo-1','2025-01-07T09:00:00Z','clock'))).rejects.toThrow(/closed/);
+    await expect(db.deleteEntry(pending.id)).rejects.toThrow(/closed/);
+    await db.reopenPayPeriod(closed.id);
+    expect((await db.getCloseouts()).find(item=>item.id===closed.id)?.reopenedBy).toBe('demo-0');
+    await db.saveEntry(newEntry('demo-1','2025-01-07T09:00:00Z','clock'));
+  });
 });
 
