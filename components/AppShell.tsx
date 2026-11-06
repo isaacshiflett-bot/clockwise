@@ -5,7 +5,7 @@ import Link from 'next/link';
 import {useRouter} from 'next/navigation';
 import {storage} from '@/lib/storage';
 import {hashPin} from '@/lib/storage/localStorage';
-import type {TaskCategory,TimeEntry,User} from '@/lib/types';
+import type {Backup,TaskCategory,TimeEntry,User} from '@/lib/types';
 import {WorkerView} from './WorkerView';
 import {ManagerView} from './ManagerView';
 import {InsightsView} from './InsightsView';
@@ -18,13 +18,17 @@ export function AppShell({view}:{view:View}){
  const [ready,setReady]=useState(false),[users,setUsers]=useState<User[]>([]),[user,setUser]=useState<User|null>(null);
  const [entries,setEntries]=useState<TimeEntry[]>([]),[categories,setCategories]=useState<TaskCategory[]>([]);
  const [pin,setPin]=useState(''),[selected,setSelected]=useState(''),[error,setError]=useState('');
+ const [loadError,setLoadError]=useState(''),[recoveryFile,setRecoveryFile]=useState<File|null>(null),[confirmRecovery,setConfirmRecovery]=useState(false);
 
  const refresh=async()=>{
-  const [nextUsers,nextEntries,nextCategories]=await Promise.all([storage.getUsers(),storage.getEntries(),storage.getTaskCategories()]);
-  setUsers(nextUsers);setEntries(nextEntries);setCategories(nextCategories);
-  const session=await storage.getSession();
-  setUser(nextUsers.find(person=>person.id===session?.userId&&person.active)||null);
-  setReady(true);
+  try{
+   const [nextUsers,nextEntries,nextCategories]=await Promise.all([storage.getUsers(),storage.getEntries(),storage.getTaskCategories()]);
+   setUsers(nextUsers);setEntries(nextEntries);setCategories(nextCategories);
+   const session=await storage.getSession();
+   setUser(nextUsers.find(person=>person.id===session?.userId&&person.active)||null);
+   setLoadError('');
+  }catch(cause){setLoadError(cause instanceof Error?cause.message:'Could not load saved time data. Your browser data was preserved.')}
+  finally{setReady(true)}
  };
  useEffect(()=>{void refresh()},[]);
  useEffect(()=>{
@@ -43,8 +47,10 @@ export function AppShell({view}:{view:View}){
   router.push(account.role==='manager'?'/manager':'/');
  };
  const logout=async()=>{await storage.saveSession(null);setUser(null);router.push('/')};
+ const restore=async()=>{if(!recoveryFile||!confirmRecovery)return;try{await storage.importAll(JSON.parse(await recoveryFile.text()) as Backup);setRecoveryFile(null);setConfirmRecovery(false);await refresh()}catch(cause){setLoadError(cause instanceof Error?cause.message:'Could not import this backup.')}};
 
  if(!ready)return <main className="shell min-h-screen grid place-items-center"><div className="card w-full max-w-md text-center"><div className="brand-mark mx-auto mb-4" aria-hidden="true">◷</div><p className="font-bold">Opening Clockwise…</p><p className="muted text-sm mt-1">Loading your local time records.</p></div></main>;
+ if(loadError)return <main className="shell min-h-screen grid place-items-center"><div className="card w-full max-w-lg"><p className="eyebrow">Data recovery</p><h1 className="page-title">We could not open your records</h1><p className="error mt-4" role="alert">{loadError}</p><p className="muted text-sm mt-3">The original browser data is still in place. Free up browser storage and retry, or restore a downloaded JSON backup.</p><button className="btn secondary mt-5" onClick={()=>void refresh()}>Retry loading</button><div className="border-t border-[#dfe8e5] mt-6 pt-5"><label className="label" htmlFor="recovery-file">Restore JSON backup</label><input id="recovery-file" className="input" type="file" accept="application/json,.json" onChange={event=>{setRecoveryFile(event.target.files?.[0]||null);setConfirmRecovery(false)}}/>{recoveryFile&&<label className="flex gap-2 items-start mt-4 text-sm"><input type="checkbox" checked={confirmRecovery} onChange={event=>setConfirmRecovery(event.target.checked)}/><span>Replace the current browser data with this backup.</span></label>}<button className="btn mt-4" disabled={!recoveryFile||!confirmRecovery} onClick={restore}>Restore backup</button></div></div></main>;
 
  if(!user)return <main className="shell min-h-screen grid place-items-center">
   <div className="w-full max-w-5xl grid lg:grid-cols-[1.08fr_1fr] overflow-hidden rounded-[28px] border border-[#dce8e3] bg-white shadow-[0_24px_70px_#163b3520]">

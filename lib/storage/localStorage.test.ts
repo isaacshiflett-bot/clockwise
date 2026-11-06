@@ -1,6 +1,7 @@
-import {beforeEach,describe,it,expect} from 'vitest';
+import {beforeEach,describe,it,expect,vi} from 'vitest';
 import {LocalStorageAdapter,STORAGE_KEY,SCHEMA_VERSION,migrate,hashPin} from './localStorage';
-import {newEntry,overlaps} from '../time';
+import {monday,newEntry,overlaps} from '../time';
+import {sampleEntries} from '../insights';
 
 describe('LocalStorageAdapter',()=>{
   beforeEach(()=>localStorage.clear());
@@ -141,6 +142,48 @@ describe('LocalStorageAdapter',()=>{
     expect(await db.getAuditEvents()).toEqual([]);
     expect(await db.getCloseouts()).toEqual([]);
     expect((await db.exportAll()).schemaVersion).toBe(SCHEMA_VERSION);
+  });
+
+  it('preserves original records if a migration write fails',async()=>{
+    const db=new LocalStorageAdapter();
+    const backup=await db.exportAll();
+    const original=JSON.stringify({...backup,schemaVersion:5});
+    localStorage.setItem(STORAGE_KEY,original);
+    const write=vi.spyOn(Storage.prototype,'setItem').mockImplementation(()=>{throw new DOMException('Full','QuotaExceededError')});
+    try{await expect(db.getEntries()).rejects.toThrow(/preserved/)}finally{write.mockRestore()}
+    expect(localStorage.getItem(STORAGE_KEY)).toBe(original);
+  });
+
+  it('keeps malformed and newer records for recovery',async()=>{
+    const db=new LocalStorageAdapter();
+    const backup=await db.exportAll();
+    localStorage.setItem(STORAGE_KEY,'{"broken":');
+    await expect(db.getEntries()).rejects.toThrow(/preserved/);
+    expect(localStorage.getItem(STORAGE_KEY)).toBe('{"broken":');
+    await db.importAll(backup);
+    expect(await db.getEntries()).toHaveLength(63);
+    const newer=JSON.stringify({schemaVersion:SCHEMA_VERSION+1,users:[],entries:[]});
+    localStorage.setItem(STORAGE_KEY,newer);
+    await expect(db.getEntries()).rejects.toThrow(/newer app version/);
+    expect(localStorage.getItem(STORAGE_KEY)).toBe(newer);
+    await expect(db.importAll(JSON.parse(newer))).rejects.toThrow(/newer app version/);
+    expect(localStorage.getItem(STORAGE_KEY)).toBe(newer);
+  });
+
+  it('replaces demo shifts atomically and respects closed periods',async()=>{
+    const db=new LocalStorageAdapter();
+    await db.saveSession({userId:'demo-0'});
+    const samples=sampleEntries(['demo-1','demo-3'],['demo-orders-packed'],new Date());
+    await db.replaceSampleData(samples,[]);
+    const replaced=await db.getEntries();
+    expect(replaced.filter(entry=>entry.id.startsWith('sample-'))).toHaveLength(40);
+    expect(replaced).toHaveLength(43);
+    expect(replaced.find(entry=>entry.id==='sample-0-0-1')?.userId).toBe('demo-3');
+    const start=monday(new Date(samples[0].clockIn));const end=new Date(start);end.setDate(end.getDate()+7);
+    await db.closePayPeriod(start.toISOString(),end.toISOString());
+    const before=JSON.stringify(await db.exportAll());
+    await expect(db.replaceSampleData(samples,[])).rejects.toThrow(/closed pay period/);
+    expect(JSON.stringify(await db.exportAll())).toBe(before);
   });
 
   it('records who changed, approved, and deleted a shift with previous values',async()=>{
