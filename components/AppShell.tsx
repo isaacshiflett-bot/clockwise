@@ -1,14 +1,86 @@
 'use client';
-import {useEffect,useState} from 'react';import Link from 'next/link';import {useRouter} from 'next/navigation';import {storage} from '@/lib/storage';import {hashPin} from '@/lib/storage/localStorage';import type {TimeEntry,TaskCategory,User} from '@/lib/types';import {WorkerView} from './WorkerView';import {ManagerView} from './ManagerView';import {InsightsView} from './InsightsView';import {CloseoutView} from './CloseoutView';
-export function AppShell({view}:{view:'worker'|'manager'|'insights'|'closeout'}){const router=useRouter();const [ready,setReady]=useState(false),[users,setUsers]=useState<User[]>([]),[user,setUser]=useState<User|null>(null),[entries,setEntries]=useState<TimeEntry[]>([]),[categories,setCategories]=useState<TaskCategory[]>([]),[pin,setPin]=useState(''),[selected,setSelected]=useState(''),[error,setError]=useState('');
- const refresh=async()=>{const [u,e,c]=await Promise.all([storage.getUsers(),storage.getEntries(),storage.getTaskCategories()]);setUsers(u);setEntries(e);setCategories(c);const session=await storage.getSession();const current=u.find(x=>x.id===session?.userId&&x.active)||null;setUser(current);setReady(true);};
- useEffect(()=>{void refresh();},[]);
- useEffect(()=>{if(!ready)return;if(!user&&view!=='worker')router.replace('/');else if(user?.role==='worker'&&view!=='worker')router.replace('/');else if(user?.role==='manager'&&view==='worker')router.replace('/manager');},[ready,user,view,router]);
- const login=async(e:React.FormEvent)=>{e.preventDefault();setError('');const u=users.find(x=>x.id===selected);if(!u||!u.active){setError('Choose an active user.');return}if(!/^\d{4,6}$/.test(pin)||await hashPin(pin)!==u.pinHash){setError('Incorrect PIN.');return}await storage.saveSession({userId:u.id});setPin('');setUser(u);router.push(u.role==='manager'?'/manager':'/');};
- const logout=async()=>{await storage.saveSession(null);setUser(null);router.push('/');};
- if(!ready)return <main className="shell"><div className="card">Loading your time clock…</div></main>;
- if(!user)return <main className="shell min-h-screen grid place-items-center"><div className="card w-full max-w-md"><div className="text-sm uppercase tracking-widest font-bold text-teal-700">Clockwise</div><h1 className="text-3xl font-bold mt-2">Welcome back</h1><p className="muted mt-2 mb-6">Choose your name and enter your PIN to continue.</p><form onSubmit={login} className="grid gap-4"><div><label className="label" htmlFor="user">Your name</label><select className="input" id="user" value={selected} onChange={e=>setSelected(e.target.value)} required><option value="">Select a name</option>{users.filter(u=>u.active).map(u=><option key={u.id} value={u.id}>{u.name}</option>)}</select></div><div><label className="label" htmlFor="pin">PIN</label><input className="input" id="pin" type="password" inputMode="numeric" pattern="[0-9]{4,6}" minLength={4} maxLength={6} value={pin} onChange={e=>setPin(e.target.value)} required/></div>{error&&<p className="error" role="alert">{error}</p>}<button className="btn w-full">Sign in</button></form><div className="mt-7 pt-5 border-t border-slate-200 text-sm"><strong>Demo credentials</strong><p className="muted mt-2">Manager · 1234<br/>Alex Rivera · 1111<br/>Jordan Lee · 2222<br/>Sam Patel · 3333</p></div></div></main>;
+
+import {useEffect,useState} from 'react';
+import Link from 'next/link';
+import {useRouter} from 'next/navigation';
+import {storage} from '@/lib/storage';
+import {hashPin} from '@/lib/storage/localStorage';
+import type {TaskCategory,TimeEntry,User} from '@/lib/types';
+import {WorkerView} from './WorkerView';
+import {ManagerView} from './ManagerView';
+import {InsightsView} from './InsightsView';
+import {CloseoutView} from './CloseoutView';
+
+type View='worker'|'manager'|'insights'|'closeout';
+
+export function AppShell({view}:{view:View}){
+ const router=useRouter();
+ const [ready,setReady]=useState(false),[users,setUsers]=useState<User[]>([]),[user,setUser]=useState<User|null>(null);
+ const [entries,setEntries]=useState<TimeEntry[]>([]),[categories,setCategories]=useState<TaskCategory[]>([]);
+ const [pin,setPin]=useState(''),[selected,setSelected]=useState(''),[error,setError]=useState('');
+
+ const refresh=async()=>{
+  const [nextUsers,nextEntries,nextCategories]=await Promise.all([storage.getUsers(),storage.getEntries(),storage.getTaskCategories()]);
+  setUsers(nextUsers);setEntries(nextEntries);setCategories(nextCategories);
+  const session=await storage.getSession();
+  setUser(nextUsers.find(person=>person.id===session?.userId&&person.active)||null);
+  setReady(true);
+ };
+ useEffect(()=>{void refresh()},[]);
+ useEffect(()=>{
+  if(!ready)return;
+  if(!user&&view!=='worker')router.replace('/');
+  else if(user?.role==='worker'&&view!=='worker')router.replace('/');
+  else if(user?.role==='manager'&&view==='worker')router.replace('/manager');
+ },[ready,user,view,router]);
+
+ const login=async(event:React.FormEvent)=>{
+  event.preventDefault();setError('');
+  const account=users.find(person=>person.id===selected);
+  if(!account||!account.active){setError('Choose an active user.');return}
+  if(!/^\d{4,6}$/.test(pin)||await hashPin(pin)!==account.pinHash){setError('Incorrect PIN.');return}
+  await storage.saveSession({userId:account.id});setPin('');setUser(account);
+  router.push(account.role==='manager'?'/manager':'/');
+ };
+ const logout=async()=>{await storage.saveSession(null);setUser(null);router.push('/')};
+
+ if(!ready)return <main className="shell min-h-screen grid place-items-center"><div className="card w-full max-w-md text-center"><div className="brand-mark mx-auto mb-4" aria-hidden="true">◷</div><p className="font-bold">Opening Clockwise…</p><p className="muted text-sm mt-1">Loading your local time records.</p></div></main>;
+
+ if(!user)return <main className="shell min-h-screen grid place-items-center">
+  <div className="w-full max-w-5xl grid lg:grid-cols-[1.08fr_1fr] overflow-hidden rounded-[28px] border border-[#dce8e3] bg-white shadow-[0_24px_70px_#163b3520]">
+   <div className="hidden lg:flex bg-[#0a4947] text-white p-8 sm:p-11 lg:p-14 flex-col justify-between min-h-[580px]">
+    <div><div className="flex items-center gap-3"><span className="brand-mark bg-white/15 shadow-none" aria-hidden="true">◷</span><span className="text-xl font-extrabold tracking-[-.05em]">Clockwise</span></div>
+     <div className="mt-12 lg:mt-24"><p className="text-xs font-bold tracking-[.18em] uppercase text-[#a9d8ca]">Time, made simple</p><h1 className="text-4xl sm:text-5xl font-extrabold tracking-[-.07em] leading-[1.06] mt-4">A calmer way to keep the team on time.</h1><p className="text-[#c5e1d9] mt-5 max-w-md">Clock shifts, review hours, and see the patterns that make scheduling easier.</p></div>
+    </div>
+    <p className="text-xs text-[#b7d9d0] mt-10">Local demo · Your data stays in this browser</p>
+   </div>
+   <div className="p-8 sm:p-11 lg:p-14 flex flex-col justify-center"><div className="flex lg:hidden items-center gap-2.5 mb-10"><span className="brand-mark" aria-hidden="true">◷</span><span className="brand-name">Clockwise</span></div>
+    <p className="eyebrow">Welcome back</p><h2 className="page-title mt-3">Sign in</h2><p className="page-intro">Choose your name and enter your PIN to continue.</p>
+    <form onSubmit={login} className="grid gap-5 mt-9">
+     <div><label className="label" htmlFor="user">Your name</label><select className="input" id="user" value={selected} onChange={event=>setSelected(event.target.value)} required><option value="">Select a name</option>{users.filter(person=>person.active).map(person=><option key={person.id} value={person.id}>{person.name}</option>)}</select></div>
+     <div><label className="label" htmlFor="pin">PIN</label><input className="input" id="pin" type="password" inputMode="numeric" autoComplete="current-password" pattern="[0-9]{4,6}" minLength={4} maxLength={6} value={pin} onChange={event=>setPin(event.target.value)} required/></div>
+     {error&&<p className="error" role="alert">{error}</p>}
+     <button className="btn w-full text-sm min-h-12">Sign in <span aria-hidden="true">→</span></button>
+    </form>
+    <div className="mt-10 pt-6 border-t border-[#e0eae5]"><p className="eyebrow">Try the demo</p><div className="grid grid-cols-2 gap-x-5 gap-y-3 mt-4 text-sm"><p><strong className="block">Manager</strong><span className="muted">PIN 1234</span></p><p><strong className="block">Alex Rivera</strong><span className="muted">PIN 1111</span></p><p><strong className="block">Jordan Lee</strong><span className="muted">PIN 2222</span></p><p><strong className="block">Sam Patel</strong><span className="muted">PIN 3333</span></p></div></div>
+   </div>
+  </div>
+ </main>;
+
  if((view!=='worker'&&user.role!=='manager')||(view==='worker'&&user.role==='manager'))return <main className="shell"><div className="card">Redirecting…</div></main>;
- return <div><header className="bg-white border-b border-slate-200"><div className="shell flex flex-wrap gap-3 items-center justify-between"><div className="flex items-center gap-7 flex-wrap"><Link href={user.role==='manager'?'/manager':'/'} className="text-xl font-black tracking-tight text-teal-800">◷ Clockwise</Link>{user.role==='manager'&&<nav aria-label="Manager navigation" className="flex gap-1"><Link className={'navlink '+(view==='manager'?'active':'')} href="/manager">Overview</Link><Link className={'navlink '+(view==='insights'?'active':'')} href="/manager/insights">Insights</Link><Link className={'navlink '+(view==='closeout'?'active':'')} href="/manager/closeout">Closeout</Link></nav>}</div><div className="flex items-center gap-3 text-sm"><span className="muted">{user.name}</span><button className="btn secondary" onClick={logout}>Log out</button></div></div></header><main className="shell">{entries.some(e=>e.note.startsWith('Demo'))&&<p className="mb-5 rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-900">Showing placeholder shifts for this local demo. Clock in or review a pending entry to try the workflow.</p>}{view==='worker'?<WorkerView user={user} entries={entries} categories={categories} refresh={refresh}/>:view==='manager'?<ManagerView user={user} users={users} entries={entries} categories={categories} refresh={refresh}/>:view==='insights'?<InsightsView users={users} entries={entries} categories={categories} refresh={refresh}/>:<CloseoutView users={users} entries={entries} refresh={refresh}/>}</main></div>;
+ const manager=user.role==='manager';
+ return <div>
+  <header className="site-header"><div className="shell flex flex-wrap items-center justify-between gap-x-5 gap-y-3">
+   <div className="flex items-center gap-7 min-w-0"><Link href={manager?'/manager':'/'} className="flex items-center gap-2.5 shrink-0" aria-label="Clockwise home"><span className="brand-mark" aria-hidden="true">◷</span><span className="brand-name">Clockwise</span></Link>
+    {manager&&<nav aria-label="Manager navigation" className="hidden sm:flex gap-1 p-1 rounded-xl bg-[#f4f8f5]"><Link className={'navlink '+(view==='manager'?'active':'')} aria-current={view==='manager'?'page':undefined} href="/manager">Overview</Link><Link className={'navlink '+(view==='insights'?'active':'')} aria-current={view==='insights'?'page':undefined} href="/manager/insights">Insights</Link><Link className={'navlink '+(view==='closeout'?'active':'')} aria-current={view==='closeout'?'page':undefined} href="/manager/closeout">Closeout</Link></nav>}
+   </div>
+   <div className="flex items-center gap-3 text-sm"><span className="hidden sm:inline muted">Signed in as <strong className="text-[#183036]">{user.name}</strong></span><button className="btn secondary" onClick={logout}>Log out</button></div>
+   {manager&&<nav aria-label="Manager navigation" className="flex sm:hidden gap-1 w-full overflow-x-auto p-1 rounded-xl bg-[#f4f8f5]"><Link className={'navlink '+(view==='manager'?'active':'')} aria-current={view==='manager'?'page':undefined} href="/manager">Overview</Link><Link className={'navlink '+(view==='insights'?'active':'')} aria-current={view==='insights'?'page':undefined} href="/manager/insights">Insights</Link><Link className={'navlink '+(view==='closeout'?'active':'')} aria-current={view==='closeout'?'page':undefined} href="/manager/closeout">Closeout</Link></nav>}
+  </div></header>
+  <main className="shell pb-16">
+   {entries.some(entry=>entry.note.startsWith('Demo'))&&<p className="mb-6 rounded-xl bg-[#fff7e7] border border-[#efd9a9] px-4 py-3 text-sm text-[#76551c]">Demo shifts are loaded in this browser. Try clocking in or reviewing a pending entry to explore the workflow.</p>}
+   {view==='worker'?<WorkerView user={user} entries={entries} categories={categories} refresh={refresh}/>:view==='manager'?<ManagerView user={user} users={users} entries={entries} categories={categories} refresh={refresh}/>:view==='insights'?<InsightsView users={users} entries={entries} categories={categories} refresh={refresh}/>:<CloseoutView users={users} entries={entries} refresh={refresh}/>}
+  </main>
+ </div>;
 }
 
