@@ -5,25 +5,28 @@ import Link from 'next/link';
 import {useRouter} from 'next/navigation';
 import {storage} from '@/lib/storage';
 import {hashPin} from '@/lib/storage/localStorage';
-import type {Backup,TaskCategory,TimeEntry,User} from '@/lib/types';
+import type {Backup,ScheduleAssignment,TaskCategory,TimeEntry,User} from '@/lib/types';
 import {WorkerView} from './WorkerView';
 import {ManagerView} from './ManagerView';
 import {InsightsView} from './InsightsView';
 import {CloseoutView} from './CloseoutView';
+import {ScheduleView} from './ScheduleView';
+import {LeadershipView} from './LeadershipView';
 
-type View='worker'|'manager'|'insights'|'closeout';
+type View='worker'|'manager'|'insights'|'closeout'|'schedule'|'leadership';
 
 export function AppShell({view}:{view:View}){
  const router=useRouter();
  const [ready,setReady]=useState(false),[users,setUsers]=useState<User[]>([]),[user,setUser]=useState<User|null>(null);
  const [entries,setEntries]=useState<TimeEntry[]>([]),[categories,setCategories]=useState<TaskCategory[]>([]);
+ const [assignments,setAssignments]=useState<ScheduleAssignment[]>([]);
  const [pin,setPin]=useState(''),[selected,setSelected]=useState(''),[error,setError]=useState('');
  const [loadError,setLoadError]=useState(''),[recoveryFile,setRecoveryFile]=useState<File|null>(null),[confirmRecovery,setConfirmRecovery]=useState(false);
 
  const refresh=async()=>{
   try{
-   const [nextUsers,nextEntries,nextCategories]=await Promise.all([storage.getUsers(),storage.getEntries(),storage.getTaskCategories()]);
-   setUsers(nextUsers);setEntries(nextEntries);setCategories(nextCategories);
+   const [nextUsers,nextEntries,nextCategories,nextAssignments]=await Promise.all([storage.getUsers(),storage.getEntries(),storage.getTaskCategories(),storage.getAssignments()]);
+   setUsers(nextUsers);setEntries(nextEntries);setCategories(nextCategories);setAssignments(nextAssignments);
    const session=await storage.getSession();
    setUser(nextUsers.find(person=>person.id===session?.userId&&person.active)||null);
    setLoadError('');
@@ -56,7 +59,7 @@ export function AppShell({view}:{view:View}){
   <div className="w-full max-w-5xl grid lg:grid-cols-[1.08fr_1fr] overflow-hidden rounded-[28px] border border-[#dce8e3] bg-white shadow-[0_24px_70px_#163b3520]">
    <div className="hidden lg:flex bg-[#0a4947] text-white p-8 sm:p-11 lg:p-14 flex-col justify-between min-h-[580px]">
     <div><div className="flex items-center gap-3"><span className="brand-mark bg-white/15 shadow-none" aria-hidden="true">◷</span><span className="text-xl font-extrabold tracking-[-.05em]">Clockwise</span></div>
-     <div className="mt-12 lg:mt-24"><p className="text-xs font-bold tracking-[.18em] uppercase text-[#a9d8ca]">Time, made simple</p><h1 className="text-4xl sm:text-5xl font-extrabold tracking-[-.07em] leading-[1.06] mt-4">A calmer way to keep the team on time.</h1><p className="text-[#c5e1d9] mt-5 max-w-md">Clock shifts, review hours, and see the patterns that make scheduling easier.</p></div>
+     <div className="mt-12 lg:mt-24"><p className="text-xs font-bold tracking-[.18em] uppercase text-[#a9d8ca]">Shipping operations, made clear</p><h1 className="text-4xl sm:text-5xl font-extrabold tracking-[-.07em] leading-[1.06] mt-4">Know who is on the floor, and where.</h1><p className="text-[#c5e1d9] mt-5 max-w-md">Track time, plan shipping areas, cover callouts, and keep leadership up to date.</p></div>
     </div>
     <p className="text-xs text-[#b7d9d0] mt-10">Local demo · Your data stays in this browser</p>
    </div>
@@ -78,14 +81,14 @@ export function AppShell({view}:{view:View}){
  return <div>
   <header className="site-header"><div className="shell flex flex-wrap items-center justify-between gap-x-5 gap-y-3">
    <div className="flex items-center gap-7 min-w-0"><Link href={manager?'/manager':'/'} className="flex items-center gap-2.5 shrink-0" aria-label="Clockwise home"><span className="brand-mark" aria-hidden="true">◷</span><span className="brand-name">Clockwise</span></Link>
-    {manager&&<nav aria-label="Manager navigation" className="hidden sm:flex gap-1 p-1 rounded-xl bg-[#f4f8f5]"><Link className={'navlink '+(view==='manager'?'active':'')} aria-current={view==='manager'?'page':undefined} href="/manager">Overview</Link><Link className={'navlink '+(view==='insights'?'active':'')} aria-current={view==='insights'?'page':undefined} href="/manager/insights">Insights</Link><Link className={'navlink '+(view==='closeout'?'active':'')} aria-current={view==='closeout'?'page':undefined} href="/manager/closeout">Closeout</Link></nav>}
+    {manager&&<nav aria-label="Manager navigation" className="hidden sm:flex gap-1 p-1 rounded-xl bg-[#f4f8f5]"><Link className={'navlink '+(view==='manager'?'active':'')} aria-current={view==='manager'?'page':undefined} href="/manager">Timecards</Link><Link className={'navlink '+(view==='schedule'?'active':'')} aria-current={view==='schedule'?'page':undefined} href="/manager/schedule">Schedule</Link><Link className={'navlink '+(view==='leadership'?'active':'')} aria-current={view==='leadership'?'page':undefined} href="/manager/leadership">Leadership</Link><Link className={'navlink '+(view==='insights'?'active':'')} aria-current={view==='insights'?'page':undefined} href="/manager/insights">Insights</Link><Link className={'navlink '+(view==='closeout'?'active':'')} aria-current={view==='closeout'?'page':undefined} href="/manager/closeout">Closeout</Link></nav>}
    </div>
    <div className="flex items-center gap-3 text-sm"><span className="hidden sm:inline muted">Signed in as <strong className="text-[#183036]">{user.name}</strong></span><button className="btn secondary" onClick={logout}>Log out</button></div>
-   {manager&&<nav aria-label="Manager navigation" className="flex sm:hidden gap-1 w-full overflow-x-auto p-1 rounded-xl bg-[#f4f8f5]"><Link className={'navlink '+(view==='manager'?'active':'')} aria-current={view==='manager'?'page':undefined} href="/manager">Overview</Link><Link className={'navlink '+(view==='insights'?'active':'')} aria-current={view==='insights'?'page':undefined} href="/manager/insights">Insights</Link><Link className={'navlink '+(view==='closeout'?'active':'')} aria-current={view==='closeout'?'page':undefined} href="/manager/closeout">Closeout</Link></nav>}
+   {manager&&<nav aria-label="Manager navigation" className="flex sm:hidden gap-1 w-full overflow-x-auto p-1 rounded-xl bg-[#f4f8f5]"><Link className={'navlink '+(view==='manager'?'active':'')} aria-current={view==='manager'?'page':undefined} href="/manager">Timecards</Link><Link className={'navlink '+(view==='schedule'?'active':'')} aria-current={view==='schedule'?'page':undefined} href="/manager/schedule">Schedule</Link><Link className={'navlink '+(view==='leadership'?'active':'')} aria-current={view==='leadership'?'page':undefined} href="/manager/leadership">Leadership</Link><Link className={'navlink '+(view==='insights'?'active':'')} aria-current={view==='insights'?'page':undefined} href="/manager/insights">Insights</Link><Link className={'navlink '+(view==='closeout'?'active':'')} aria-current={view==='closeout'?'page':undefined} href="/manager/closeout">Closeout</Link></nav>}
   </div></header>
   <main className="shell pb-16">
    {entries.some(entry=>entry.note.startsWith('Demo'))&&<p className="mb-6 rounded-xl bg-[#fff7e7] border border-[#efd9a9] px-4 py-3 text-sm text-[#76551c]">Demo shifts are loaded in this browser. Try clocking in or reviewing a pending entry to explore the workflow.</p>}
-   {view==='worker'?<WorkerView user={user} entries={entries} categories={categories} refresh={refresh}/>:view==='manager'?<ManagerView user={user} users={users} entries={entries} categories={categories} refresh={refresh}/>:view==='insights'?<InsightsView users={users} entries={entries} categories={categories} refresh={refresh}/>:<CloseoutView users={users} entries={entries} refresh={refresh}/>}
+   {view==='worker'?<WorkerView user={user} entries={entries} categories={categories} assignments={assignments.filter(a=>a.userId===user.id)} refresh={refresh}/>:view==='manager'?<ManagerView user={user} users={users} entries={entries} categories={categories} refresh={refresh}/>:view==='schedule'?<ScheduleView users={users} assignments={assignments} refresh={refresh}/>:view==='leadership'?<LeadershipView users={users} assignments={assignments} entries={entries}/>:view==='insights'?<InsightsView users={users} entries={entries} categories={categories} refresh={refresh}/>:<CloseoutView users={users} entries={entries} refresh={refresh}/>}
   </main>
  </div>;
 }

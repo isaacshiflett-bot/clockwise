@@ -1,6 +1,6 @@
 # Clockwise
 
-A mobile-first work-time tracker built with Next.js App Router, TypeScript, Tailwind CSS, Recharts, and Vitest. Workers clock in and out, take breaks, submit manual entries, and see their own history. Managers review entries, manage workers and output categories, set coverage targets, and explore scheduling insights.
+A mobile-first shipping operations demo built with Next.js App Router, TypeScript, Tailwind CSS, Recharts, and Vitest. Workers clock in and out, take breaks, submit manual entries, and see their own weekly shipping-area assignments. Managers review timecards, plan the floor, cover callouts, and show leaders a staffing snapshot.
 
 If a worker forgets to clock out, **Forgot to clock out? Correct the time** on the time clock lets them enter the actual end time and a required explanation. An unfinished break also needs its actual end time. The corrected shift becomes a manual pending entry for manager approval; the original clock-in stays intact. This works even when the open shift is older than 24 hours, while the corrected shift itself must still be no longer than 24 hours.
 
@@ -24,7 +24,15 @@ Open http://localhost:3000. Run `npm run lint`, `npm test`, and `npm run build` 
 | Jordan Lee | Worker | 2222 |
 | Sam Patel | Worker | 3333 |
 
-The demo users are created on first load, along with sample shifts, output categories, and coverage targets so each view has data to explore. The sample includes approved, pending, and rejected entries; clock in as a worker to try a live shift. An existing browser with entries is left unchanged; an untouched earlier demo setup is populated once. PINs are SHA-256 hashed with the Web Crypto API before they are saved. **Client-side authentication is demo-only, not real security.** Anyone with browser access can inspect or change local data.
+The demo users are created on first load, along with sample shifts, output categories, coverage targets, and two shipping assignments per weekday for the current week. One worker is left available each day so an emergency coverage change can be demonstrated. The sample includes approved, pending, and rejected time entries; clock in as a worker to try a live shift. Existing time data is preserved when upgrading. PINs are SHA-256 hashed with the Web Crypto API before they are saved. **Client-side authentication is demo-only, not real security.** Anyone with browser access can inspect or change local data.
+
+## Shipping schedule and leadership demo
+
+Sign in as **Manager** and open **Schedule**. The weekly board shows workers assigned to Receiving, Picking, Packing, Loading, Dispatch, or Returns. Choose one or more days, a worker, an area, and shift times to add assignments. Each worker can have one active assignment per day. The **Load demo week** button fills the selected week with sample assignments without replacing existing work. Use **Cover a callout** to select a planned shift and a reason, with an optional available replacement. The original becomes a visible callout; if no one is available yet, it remains uncovered and can be filled later. A replacement takes the same area and time. This is a local demo change; it does not send notifications.
+
+Open **Leadership** to see this week’s staffed shifts, callouts, covered shifts, approved and pending hours, staffing by area and day, and the most recent schedule changes. A new assignment or callout updates this view immediately in the same browser. Sign in as a worker to see **My schedule this week** beside the time clock and hours. Scheduled shifts and actual clocked time are shown separately so leaders can tell a plan from a worked shift.
+
+For a short demo: load a week, add an assignment, open Leadership to show the new count, return to Schedule, cover a callout, then reopen Leadership to show the callout and replacement in the change feed. If you need to show another week, use the week arrows and **Load demo week** there.
 
 ## Insights
 
@@ -54,6 +62,6 @@ The period selector includes older periods with entries and every saved closeout
 
 ## Data and limitations
 
-All data stays in the current browser and device under the `timeclock:v1` localStorage key. It is not shared across devices or users, even when the same Vercel URL is opened. Use **Overview → Backup** to export/import a full JSON copy. Shifts are stored as ISO 8601 UTC timestamps and shown in the browser's local time zone. Shifts crossing midnight count toward their start day.
+All data stays in the current browser and device under the `timeclock:v1` localStorage key. It is not shared across devices or users, even when the same Vercel URL is opened. Emergency changes and the leadership view therefore update in this browser only; a real company would need shared storage and notifications to push changes to other people. Use **Timecards → Backup** to export/import a full JSON copy, including schedule assignments. Timecard timestamps are stored as ISO 8601 UTC and shown in the browser's local time zone. Schedule dates and shift times are local wall-clock values for planning. Shifts crossing midnight count toward their start day.
 
 All data access goes through the async `StorageAdapter` interface in `lib/storage/types.ts`. To add a hosted database later, implement that interface and change the active adapter export in `lib/storage/index.ts`; UI code does not read localStorage directly. A real deployment with multiple people also needs server-side authentication and authorization.
