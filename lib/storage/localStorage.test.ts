@@ -20,8 +20,52 @@ describe('LocalStorageAdapter',()=>{
     expect(entries.filter(e=>e.status==='approved'&&e.output.length>0)).toHaveLength(60);
     expect(await db.getTaskCategories()).toHaveLength(2);
     expect(await db.getCoverageTargets()).toHaveLength(50);
+    expect(await db.getAssignments()).toHaveLength(10);
     expect((await db.getEntries())).toHaveLength(63);
     expect(entries.some((e,i)=>entries.slice(i+1).some(other=>overlaps(e,other)))).toBe(false);
+  });
+
+  it('migrates v6 data and keeps schedule assignments in backups',async()=>{
+    const db=new LocalStorageAdapter();const backup=await db.exportAll();
+    const legacy=Object.fromEntries(Object.entries(backup).filter(([key])=>key!=='assignments'));
+    localStorage.setItem(STORAGE_KEY,JSON.stringify({...legacy,schemaVersion:6}));
+    expect(await db.getAssignments()).toHaveLength(10);
+    expect((await db.exportAll()).schemaVersion).toBe(7);
+    await db.importAll(await db.exportAll());
+    expect(await db.getAssignments()).toHaveLength(10);
+  });
+
+  it('requires a manager and applies emergency coverage atomically',async()=>{
+    const db=new LocalStorageAdapter();const original=(await db.getAssignments())[0];
+    const assignments=await db.getAssignments();const available=(await db.getUsers()).find(u=>u.role==='worker'&&u.id!==original.userId&&!assignments.some(a=>a.date===original.date&&a.userId===u.id))!;
+    await expect(db.createEmergencyCoverage(original.id,available.id,'Sick callout')).rejects.toThrow(/Manager/);
+    await db.saveSession({userId:'demo-0'});
+    await expect(db.createEmergencyCoverage(original.id,original.userId,'Sick callout')).rejects.toThrow(/different/);
+    expect(await db.getAssignments()).toHaveLength(10);
+    await db.createEmergencyCoverage(original.id,available.id,'Sick callout');
+    const changed=await db.getAssignments();expect(changed).toHaveLength(11);
+    expect(changed.find(a=>a.id===original.id)?.status).toBe('callout');
+    expect(changed.find(a=>a.replacesId===original.id)).toMatchObject({userId:available.id,status:'coverage',area:original.area,date:original.date});
+    await expect(db.deleteAssignment(original.id)).rejects.toThrow(/history/);
+  });
+
+  it('rejects a conflicting schedule batch without saving part of it',async()=>{
+    const db=new LocalStorageAdapter();await db.saveSession({userId:'demo-0'});
+    const original=(await db.getAssignments())[0];const at=new Date().toISOString();
+    const freeDay='2030-01-07';const first={...original,id:crypto.randomUUID(),date:freeDay,createdAt:at,updatedAt:at};
+    const conflicting={...first,id:crypto.randomUUID(),area:'Packing' as const};
+    await expect(db.saveAssignments([first,conflicting])).rejects.toThrow(/already/);
+    expect((await db.getAssignments()).some(a=>a.date===freeDay)).toBe(false);
+  });
+
+  it('records an uncovered callout and can assign coverage later',async()=>{
+    const db=new LocalStorageAdapter();await db.saveSession({userId:'demo-0'});
+    const assignments=await db.getAssignments();const original=assignments[0];const available=(await db.getUsers()).find(u=>u.role==='worker'&&!assignments.some(a=>a.date===original.date&&a.userId===u.id))!;
+    await db.createEmergencyCoverage(original.id,null,'Absent');
+    expect((await db.getAssignments()).find(a=>a.id===original.id)?.status).toBe('callout');
+    expect((await db.getAssignments()).some(a=>a.replacesId===original.id)).toBe(false);
+    await db.createEmergencyCoverage(original.id,available.id,'Covering absent worker');
+    expect((await db.getAssignments()).find(a=>a.replacesId===original.id)?.userId).toBe(available.id);
   });
 
   it('saves, filters, deletes, exports, and imports entries',async()=>{
