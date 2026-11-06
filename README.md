@@ -36,7 +36,7 @@ Set a target headcount for one weekday and hour in **Coverage targets**. Saving 
 
 ## Vercel deployment
 
-Push this repository to GitHub, then import the GitHub repository in Vercel. The Next.js framework is detected automatically. No environment variables, custom build command, database, or Vercel settings are needed.
+The [GitHub repository](https://github.com/isaacshiflett-bot/clockwise) is connected to the existing Vercel project. Pushing to `main` automatically builds and updates the [live demo](https://clockwise-demo-eight.vercel.app). Vercel detects Next.js automatically; no environment variables, custom build command, or database are needed.
 
 ## Local backups and pay periods
 
