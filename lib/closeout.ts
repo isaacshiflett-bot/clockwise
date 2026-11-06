@@ -1,4 +1,4 @@
-import type {AppSettings,TimeEntry,User} from './types';
+import type {AppSettings,PayPeriodCloseout,TimeEntry,User} from './types';
 import {monday,workedHours} from './time';
 import {payPeriodBounds} from './settings';
 
@@ -11,6 +11,19 @@ export function periodAtOffset(now:Date,settings:AppSettings,offset:number){
  start.setDate(start.getDate()-offset*settings.payPeriodWeeks*7);
  end.setDate(end.getDate()-offset*settings.payPeriodWeeks*7);
  return {start,end};
+}
+
+export function availablePeriods(now:Date,settings:AppSettings,entries:TimeEntry[],closeouts:PayPeriodCloseout[]){
+ const periods=new Map<string,{key:string;start:Date;end:Date}>();
+ const add=(start:Date,end:Date)=>{
+  if(!Number.isFinite(start.getTime())||!Number.isFinite(end.getTime())||end.getTime()>now.getTime())return;
+  const key=`${start.toISOString()}|${end.toISOString()}`;
+  periods.set(key,{key,start,end});
+ };
+ for(let offset=1;offset<=4;offset++){const period=periodAtOffset(now,settings,offset);add(period.start,period.end)}
+ for(const entry of entries){if(Number.isFinite(new Date(entry.clockIn).getTime())){const period=payPeriodBounds(new Date(entry.clockIn),settings);add(period.start,period.end)}}
+ for(const closeout of closeouts)add(new Date(closeout.start),new Date(closeout.end));
+ return [...periods.values()].sort((a,b)=>b.start.getTime()-a.start.getTime()||b.end.getTime()-a.end.getTime());
 }
 
 export function payrollRows(entries:TimeEntry[],users:User[],start:string,end:string):PayrollRow[]{

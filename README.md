@@ -42,9 +42,13 @@ Push this repository to GitHub, then import the GitHub repository in Vercel. The
 
 The manager Overview shows **Backup due** when local data has changed since the last full JSON export. It displays the last export time and lets you download a new backup. Signing in and out does not mark data as changed. Keep the downloaded file outside the browser; importing a backup prompts for confirmation and marks the restored data as needing a fresh export.
 
+If stored data cannot be read or upgraded, Clockwise preserves the original browser record and shows a recovery screen. Free browser storage space and retry, or restore a downloaded JSON backup there. A failed upgrade never clears the original record automatically.
+
 In Overview → **Pay period**, choose the first day of a period and a length of 1–4 weeks. Worker pay-period totals follow this setting. The default is a two-week period anchored to Monday, January 1, 2024. Weekly totals still begin Monday.
 
 Managers can open **Closeout** to review completed pay periods. The page lists unresolved shifts, approved daily hours, and Monday-based weekly hours. Once every shift in a period is approved, a manager can sign off and lock it, then download a payroll CSV. Reopen a period to make corrections and sign off again. The weekly figure includes approved shifts elsewhere in the same workweek when a configured pay period begins midweek.
+
+The period selector includes older periods with entries and every saved closeout, even when pay-period settings have changed.
 
 **Shift change history** on that page records creation, edits, approval, rejection, and deletion with the actor and before/after values. Existing changes from before this feature cannot be reconstructed. The full history and closeout records are included in JSON backups. These controls live in browser storage and are intended for local review, not tamper-proof payroll records.
 

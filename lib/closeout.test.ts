@@ -1,5 +1,5 @@
 import {describe,expect,it} from 'vitest';
-import {payrollRows,periodAtOffset} from './closeout';
+import {availablePeriods,payrollRows,periodAtOffset} from './closeout';
 import {newEntry} from './time';
 import type {TimeEntry,User} from './types';
 
@@ -25,5 +25,11 @@ describe('pay-period closeout totals',()=>{
   expect(rows).toHaveLength(1);
   expect(rows[0].dailyHours).toBe(4);
   expect(rows[0].weeklyHours).toBe(8);
+ });
+ it('keeps older signed-off periods selectable after settings change',()=>{
+  const older={id:'old',start:'2025-01-06T00:00:00Z',end:'2025-01-20T00:00:00Z',closedAt:'2025-01-20T12:00:00Z',closedBy:'m',reopenedAt:null,reopenedBy:null};
+  const periods=availablePeriods(new Date(2026,10,6),{payPeriodAnchor:'2026-11-02',payPeriodWeeks:1},[],[older]);
+  expect(periods.some(period=>period.start.getTime()===new Date(older.start).getTime()&&period.end.getTime()===new Date(older.end).getTime())).toBe(true);
+  expect(periods.length).toBeGreaterThan(4);
  });
 });

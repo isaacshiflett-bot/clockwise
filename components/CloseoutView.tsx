@@ -2,7 +2,7 @@
 import {useEffect,useState} from 'react';
 import Link from 'next/link';
 import {storage} from '@/lib/storage';
-import {payrollRows,periodAtOffset} from '@/lib/closeout';
+import {availablePeriods,payrollRows} from '@/lib/closeout';
 import {localDate,localTime,workedHours} from '@/lib/time';
 import type {AppSettings,AuditEvent,PayPeriodCloseout,TimeEntry,User} from '@/lib/types';
 
@@ -11,22 +11,23 @@ const download=(name:string,content:string)=>{const url=URL.createObjectURL(new 
 const summary=(entry:TimeEntry|null)=>entry?`${localDate(entry.clockIn)} ${localTime(entry.clockIn)}–${localTime(entry.clockOut)} · ${workedHours(entry).toFixed(2)} h · ${entry.status} · ${entry.department} · ${entry.breaks.length} break(s) · Note: ${entry.note||'None'}`:'None';
 
 export function CloseoutView({users,entries,refresh}:{users:User[];entries:TimeEntry[];refresh:()=>Promise<void>}){
- const [settings,setSettings]=useState<AppSettings|null>(null),[closeouts,setCloseouts]=useState<PayPeriodCloseout[]>([]),[events,setEvents]=useState<AuditEvent[]>([]),[loading,setLoading]=useState(true),[offset,setOffset]=useState(1),[auditWorker,setAuditWorker]=useState(''),[error,setError]=useState(''),[notice,setNotice]=useState('');
+ const [settings,setSettings]=useState<AppSettings|null>(null),[closeouts,setCloseouts]=useState<PayPeriodCloseout[]>([]),[events,setEvents]=useState<AuditEvent[]>([]),[loading,setLoading]=useState(true),[periodKey,setPeriodKey]=useState(''),[auditWorker,setAuditWorker]=useState(''),[error,setError]=useState(''),[notice,setNotice]=useState('');
  const load=async()=>{const [nextSettings,nextCloseouts,nextEvents]=await Promise.all([storage.getSettings(),storage.getCloseouts(),storage.getAuditEvents()]);setSettings(nextSettings);setCloseouts(nextCloseouts);setEvents(nextEvents);setLoading(false)};
  useEffect(()=>{void load()},[]);
  if(loading||!settings)return <div className="card">Loading pay periods and activity…</div>;
- const period=periodAtOffset(new Date(),settings,offset),start=period.start.toISOString(),end=period.end.toISOString();
+ const periods=availablePeriods(new Date(),settings,entries,closeouts);
+ const period=periods.find(item=>item.key===periodKey)||periods[0],start=period.start.toISOString(),end=period.end.toISOString();
  const periodEntries=entries.filter(entry=>entry.clockIn>=start&&entry.clockIn<end);
  const unresolved=periodEntries.filter(entry=>entry.status!=='approved');
  const rows=payrollRows(entries,users,start,end);
- const closed=closeouts.find(item=>!item.reopenedAt&&item.start===start&&item.end===end);
+ const closed=closeouts.find(item=>!item.reopenedAt&&new Date(item.start).getTime()===period.start.getTime()&&new Date(item.end).getTime()===period.end.getTime());
  const canClose=!closed&&period.end.getTime()<=Date.now()&&periodEntries.length>0&&unresolved.length===0;
  const close=async()=>{setError('');setNotice('');try{await storage.closePayPeriod(start,end);await load();await refresh();setNotice('Pay period signed off and locked.')}catch(cause){setError(cause instanceof Error?cause.message:'Could not close this period.')}};
  const reopen=async()=>{if(!closed)return;setError('');setNotice('');try{await storage.reopenPayPeriod(closed.id);await load();await refresh();setNotice('Pay period reopened. Corrections are allowed again.')}catch(cause){setError(cause instanceof Error?cause.message:'Could not reopen this period.')}};
  const exportCsv=()=>{if(!closed)return;download(`payroll-${period.start.toLocaleDateString('en-CA')}.csv`,csv([['Worker ID','Worker','Department','Work date','Week starting','Approved daily hours','Approved weekly hours','Shifts'],...rows.map(row=>[row.workerId,row.worker,row.department,row.date,row.weekStart,row.dailyHours.toFixed(2),row.weeklyHours.toFixed(2),String(row.shifts)])]));};
  const visibleEvents=events.filter(event=>!auditWorker||event.userId===auditWorker).slice(0,50);
  return <div className="grid gap-6"><div><p className="eyebrow">Manager workspace</p><h1 className="page-title">Pay-period closeout</h1><p className="page-intro">Resolve exceptions, review approved hours, and sign off with confidence.</p></div>
-  <section className="card"><div className="flex flex-wrap gap-4 justify-between items-end"><div><label className="label" htmlFor="closeout-period">Completed period</label><select className="input" id="closeout-period" value={offset} onChange={event=>{setOffset(Number(event.target.value));setError('');setNotice('')}}>{[1,2,3,4].map(value=><option key={value} value={value}>{value===1?'Previous period':`${value} periods ago`}</option>)}</select></div><div className="text-sm"><strong>{period.start.toLocaleDateString()} – {new Date(period.end.getTime()-1).toLocaleDateString()}</strong><p className="muted">{periodEntries.length} shifts · {unresolved.length} unresolved</p></div><div className="flex gap-2 flex-wrap"><button className="btn" disabled={!canClose} onClick={close}>Sign off and lock</button><button className="btn secondary" disabled={!closed} onClick={exportCsv}>Download payroll CSV</button>{closed&&<button className="btn secondary" onClick={reopen}>Reopen period</button>}</div></div>
+  <section className="card"><div className="flex flex-wrap gap-4 justify-between items-end"><div><label className="label" htmlFor="closeout-period">Completed period</label><select className="input" id="closeout-period" value={period.key} onChange={event=>{setPeriodKey(event.target.value);setError('');setNotice('')}}>{periods.map(item=><option key={item.key} value={item.key}>{item.start.toLocaleDateString()} – {new Date(item.end.getTime()-1).toLocaleDateString()}</option>)}</select></div><div className="text-sm"><strong>{period.start.toLocaleDateString()} – {new Date(period.end.getTime()-1).toLocaleDateString()}</strong><p className="muted">{periodEntries.length} shifts · {unresolved.length} unresolved</p></div><div className="flex gap-2 flex-wrap"><button className="btn" disabled={!canClose} onClick={close}>Sign off and lock</button><button className="btn secondary" disabled={!closed} onClick={exportCsv}>Download payroll CSV</button>{closed&&<button className="btn secondary" onClick={reopen}>Reopen period</button>}</div></div>
    {closed&&<p className="text-sm text-teal-800 mt-4">Closed by {users.find(user=>user.id===closed.closedBy)?.name||'Manager'} on {new Date(closed.closedAt).toLocaleString()}. Entries in this period are locked.</p>}
    {!closed&&unresolved.length>0&&<div className="bg-amber-50 rounded-xl p-4 mt-4"><strong>Resolve these shifts before sign-off</strong><ul className="text-sm mt-2 grid gap-1">{unresolved.map(entry=><li key={entry.id}>{users.find(user=>user.id===entry.userId)?.name||'Unknown'} · {localDate(entry.clockIn)} · {entry.status}</li>)}</ul><Link href="/manager" className="text-teal-800 underline text-sm mt-2 inline-block">Go to approval queue</Link></div>}
    {!closed&&periodEntries.length===0&&<p className="muted mt-4">No shifts in this period yet.</p>}
