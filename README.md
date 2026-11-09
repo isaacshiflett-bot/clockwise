@@ -1,6 +1,6 @@
 # Clockwise
 
-A mobile-first shipping operations demo built with Next.js App Router, TypeScript, Tailwind CSS, Recharts, and Vitest. Workers clock in and out, take breaks, submit manual entries, and see their own weekly shipping-area assignments. Managers review timecards, plan the floor, cover callouts, and show leaders a staffing snapshot.
+A mobile-first shipping operations demo built with Next.js App Router, TypeScript, Tailwind CSS, and Vitest. Workers clock in and out, take breaks, submit manual entries, and see their own weekly shipping-area assignments. Managers review timecards, plan the floor, cover callouts, and show leaders a staffing snapshot.
 
 If a worker forgets to clock out, **Forgot to clock out? Correct the time** on the time clock lets them enter the actual end time and a required explanation. An unfinished break also needs its actual end time. The corrected shift becomes a manual pending entry for manager approval; the original clock-in stays intact. This works even when the open shift is older than 24 hours, while the corrected shift itself must still be no longer than 24 hours.
 
@@ -24,7 +24,7 @@ Open http://localhost:3000. Run `npm run lint`, `npm test`, and `npm run build` 
 | Jordan Lee | Worker | 2222 |
 | Sam Patel | Worker | 3333 |
 
-The demo users are created on first load, along with sample shifts, output categories, coverage targets, and two shipping assignments per weekday for the current week. One worker is left available each day so an emergency coverage change can be demonstrated. The sample includes approved, pending, and rejected time entries; clock in as a worker to try a live shift. Existing time data is preserved when upgrading. PINs are SHA-256 hashed with the Web Crypto API before they are saved. **Client-side authentication is demo-only, not real security.** Anyone with browser access can inspect or change local data.
+The demo users are created on first load, along with sample shifts, output categories, and two shipping assignments per weekday for the current week. One worker is left available each day so an emergency coverage change can be demonstrated. The sample includes approved, pending, and rejected time entries; clock in as a worker to try a live shift. Existing time data is preserved when upgrading. PINs are SHA-256 hashed with the Web Crypto API before they are saved. **Client-side authentication is demo-only, not real security.** Anyone with browser access can inspect or change local data.
 
 ## Shipping schedule and leadership demo
 
@@ -34,13 +34,9 @@ Open **Leadership** to see this week’s staffed shifts, callouts, covered shift
 
 For a short demo: load a week, add an assignment, open Leadership to show the new count, return to Schedule, cover a callout, then reopen Leadership to show the callout and replacement in the change feed. If you need to show another week, use the week arrows and **Load demo week** there.
 
-## Insights
+## Timecards and optional output
 
-Managers can open **Insights** to see coverage by weekday and hour, coverage against targets, weekly hours, shift averages, overtime watch, and optional output rates. The default view uses approved shifts from the last four weeks. The **Include pending entries** checkbox adds pending shifts. Each chart has a table view and CSV export.
-
-The manager Overview has a **Departments** card for assigning workers. New shifts record the worker's department at the time of the shift, so later reassignment does not rewrite historical results. In Insights, use the department filter to narrow all charts, or view **Output rate by department** to compare units per worked hour for each task category. Department rates follow the same three-shift minimum and include shift counts, table view, and CSV export. Existing records without a department are migrated to the seeded demo department or **Unassigned**.
-
-Set a target headcount for one weekday and hour in **Coverage targets**. Saving a target of zero clears it. Add task categories and units in **Overview → Output categories**. Workers can record optional counts on clock out or when editing an entry; rates appear after at least three shifts have output for that category. Morning is 06:00–12:00, Afternoon 12:00–18:00, Evening 18:00–24:00, and other starts are Overnight. The **Load sample data · demo only** button creates four weeks of approved shifts with output counts for active workers; it replaces prior generated sample shifts. If no active task categories exist, it adds two demo categories so the productivity charts have data.
+The manager **Timecards** page includes **Departments** for assigning workers. New shifts record the worker's department at the time of the shift, so later reassignment does not rewrite historical results. Existing records without a department are migrated to the seeded demo department or **Unassigned**. Managers can add output categories and units on the same page. Workers may log counts when clocking out or editing an entry, and their own **My stats** card shows rates after at least three qualifying shifts.
 
 ## Vercel deployment
 

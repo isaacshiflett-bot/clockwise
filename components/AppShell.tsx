@@ -8,12 +8,11 @@ import {hashPin} from '@/lib/storage/localStorage';
 import type {Backup,ScheduleAssignment,TaskCategory,TimeEntry,User} from '@/lib/types';
 import {WorkerView} from './WorkerView';
 import {ManagerView} from './ManagerView';
-import {InsightsView} from './InsightsView';
 import {CloseoutView} from './CloseoutView';
 import {ScheduleView} from './ScheduleView';
 import {LeadershipView} from './LeadershipView';
 
-type View='worker'|'manager'|'insights'|'closeout'|'schedule'|'leadership';
+type View='worker'|'manager'|'closeout'|'schedule'|'leadership';
 
 export function AppShell({view}:{view:View}){
  const router=useRouter();
@@ -81,14 +80,14 @@ export function AppShell({view}:{view:View}){
  return <div>
   <header className="site-header"><div className="shell flex flex-wrap items-center justify-between gap-x-5 gap-y-3">
    <div className="flex items-center gap-7 min-w-0"><Link href={manager?'/manager':'/'} className="flex items-center gap-2.5 shrink-0" aria-label="Clockwise home"><span className="brand-mark" aria-hidden="true">◷</span><span className="brand-name">Clockwise</span></Link>
-    {manager&&<nav aria-label="Manager navigation" className="hidden sm:flex gap-1 p-1 rounded-xl bg-[#f4f8f5]"><Link className={'navlink '+(view==='manager'?'active':'')} aria-current={view==='manager'?'page':undefined} href="/manager">Timecards</Link><Link className={'navlink '+(view==='schedule'?'active':'')} aria-current={view==='schedule'?'page':undefined} href="/manager/schedule">Schedule</Link><Link className={'navlink '+(view==='leadership'?'active':'')} aria-current={view==='leadership'?'page':undefined} href="/manager/leadership">Leadership</Link><Link className={'navlink '+(view==='insights'?'active':'')} aria-current={view==='insights'?'page':undefined} href="/manager/insights">Insights</Link><Link className={'navlink '+(view==='closeout'?'active':'')} aria-current={view==='closeout'?'page':undefined} href="/manager/closeout">Closeout</Link></nav>}
+    {manager&&<nav aria-label="Manager navigation" className="hidden sm:flex gap-1 p-1 rounded-xl bg-[#f4f8f5]"><Link className={'navlink '+(view==='manager'?'active':'')} aria-current={view==='manager'?'page':undefined} href="/manager">Timecards</Link><Link className={'navlink '+(view==='schedule'?'active':'')} aria-current={view==='schedule'?'page':undefined} href="/manager/schedule">Schedule</Link><Link className={'navlink '+(view==='leadership'?'active':'')} aria-current={view==='leadership'?'page':undefined} href="/manager/leadership">Leadership</Link><Link className={'navlink '+(view==='closeout'?'active':'')} aria-current={view==='closeout'?'page':undefined} href="/manager/closeout">Closeout</Link></nav>}
    </div>
    <div className="flex items-center gap-3 text-sm"><span className="hidden sm:inline muted">Signed in as <strong className="text-[#183036]">{user.name}</strong></span><button className="btn secondary" onClick={logout}>Log out</button></div>
-   {manager&&<nav aria-label="Manager navigation" className="flex sm:hidden gap-1 w-full overflow-x-auto p-1 rounded-xl bg-[#f4f8f5]"><Link className={'navlink '+(view==='manager'?'active':'')} aria-current={view==='manager'?'page':undefined} href="/manager">Timecards</Link><Link className={'navlink '+(view==='schedule'?'active':'')} aria-current={view==='schedule'?'page':undefined} href="/manager/schedule">Schedule</Link><Link className={'navlink '+(view==='leadership'?'active':'')} aria-current={view==='leadership'?'page':undefined} href="/manager/leadership">Leadership</Link><Link className={'navlink '+(view==='insights'?'active':'')} aria-current={view==='insights'?'page':undefined} href="/manager/insights">Insights</Link><Link className={'navlink '+(view==='closeout'?'active':'')} aria-current={view==='closeout'?'page':undefined} href="/manager/closeout">Closeout</Link></nav>}
+   {manager&&<nav aria-label="Manager navigation" className="flex sm:hidden gap-1 w-full overflow-x-auto p-1 rounded-xl bg-[#f4f8f5]"><Link className={'navlink '+(view==='manager'?'active':'')} aria-current={view==='manager'?'page':undefined} href="/manager">Timecards</Link><Link className={'navlink '+(view==='schedule'?'active':'')} aria-current={view==='schedule'?'page':undefined} href="/manager/schedule">Schedule</Link><Link className={'navlink '+(view==='leadership'?'active':'')} aria-current={view==='leadership'?'page':undefined} href="/manager/leadership">Leadership</Link><Link className={'navlink '+(view==='closeout'?'active':'')} aria-current={view==='closeout'?'page':undefined} href="/manager/closeout">Closeout</Link></nav>}
   </div></header>
   <main className="shell pb-16">
    {entries.some(entry=>entry.note.startsWith('Demo'))&&<p className="mb-6 rounded-xl bg-[#fff7e7] border border-[#efd9a9] px-4 py-3 text-sm text-[#76551c]">Demo shifts are loaded in this browser. Try clocking in or reviewing a pending entry to explore the workflow.</p>}
-   {view==='worker'?<WorkerView user={user} entries={entries} categories={categories} assignments={assignments.filter(a=>a.userId===user.id)} refresh={refresh}/>:view==='manager'?<ManagerView user={user} users={users} entries={entries} categories={categories} refresh={refresh}/>:view==='schedule'?<ScheduleView users={users} assignments={assignments} refresh={refresh}/>:view==='leadership'?<LeadershipView users={users} assignments={assignments} entries={entries}/>:view==='insights'?<InsightsView users={users} entries={entries} categories={categories} refresh={refresh}/>:<CloseoutView users={users} entries={entries} refresh={refresh}/>}
+   {view==='worker'?<WorkerView user={user} entries={entries} categories={categories} assignments={assignments.filter(a=>a.userId===user.id)} refresh={refresh}/>:view==='manager'?<ManagerView user={user} users={users} entries={entries} categories={categories} refresh={refresh}/>:view==='schedule'?<ScheduleView users={users} assignments={assignments} refresh={refresh}/>:view==='leadership'?<LeadershipView users={users} assignments={assignments} entries={entries}/>:<CloseoutView users={users} entries={entries} refresh={refresh}/>}
   </main>
  </div>;
 }

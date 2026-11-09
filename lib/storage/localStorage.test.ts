@@ -223,7 +223,7 @@ describe('LocalStorageAdapter',()=>{
     expect(replaced.filter(entry=>entry.id.startsWith('sample-'))).toHaveLength(40);
     expect(replaced).toHaveLength(43);
     expect(replaced.find(entry=>entry.id==='sample-0-0-1')?.userId).toBe('demo-3');
-    const start=monday(new Date(samples[0].clockIn));const end=new Date(start);end.setDate(end.getDate()+7);
+    const start=monday(new Date(samples.find(entry=>entry.id.startsWith('sample-2-'))!.clockIn));const end=new Date(start);end.setDate(end.getDate()+7);
     await db.closePayPeriod(start.toISOString(),end.toISOString());
     const before=JSON.stringify(await db.exportAll());
     await expect(db.replaceSampleData(samples,[])).rejects.toThrow(/closed pay period/);
